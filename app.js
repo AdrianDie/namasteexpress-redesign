@@ -38,62 +38,6 @@
     });
   }
 
-  /* ---------- Live open/closed status (ekte klokke mot ekte åpningstider) ---------- */
-  function getOsloParts() {
-    const fmt = new Intl.DateTimeFormat("en-GB", {
-      timeZone: "Europe/Oslo",
-      weekday: "short",
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: false,
-    });
-    const parts = fmt.formatToParts(new Date());
-    const map = {};
-    parts.forEach((p) => (map[p.type] = p.value));
-    const weekdayIdx = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 }[map.weekday];
-    return { weekday: weekdayIdx, minutes: parseInt(map.hour, 10) * 60 + parseInt(map.minute, 10) };
-  }
-  function toMinutes(hhmm) {
-    const [h, m] = hhmm.split(":").map(Number);
-    return h * 60 + m;
-  }
-  function toLabel(hhmm) {
-    return hhmm;
-  }
-  function initStatus() {
-    const els = document.querySelectorAll("[data-status]");
-    if (!els.length || typeof HOURS_BY_WEEKDAY === "undefined") return;
-    const { weekday, minutes } = getOsloParts();
-    const today = HOURS_BY_WEEKDAY[weekday];
-    const openMin = toMinutes(today.open);
-    const closeMin = toMinutes(today.close);
-
-    let html, closedState;
-    if (minutes >= openMin && minutes < closeMin) {
-      html = `<span class="txt">Open now &middot; closes ${toLabel(today.close)}</span>`;
-      closedState = false;
-    } else if (minutes < openMin) {
-      html = `<span class="txt">Closed &middot; opens today ${toLabel(today.open)}</span>`;
-      closedState = true;
-    } else {
-      const nextDay = HOURS_BY_WEEKDAY[(weekday + 1) % 7];
-      html = `<span class="txt">Closed &middot; opens tomorrow ${toLabel(nextDay.open)}</span>`;
-      closedState = true;
-    }
-    els.forEach((el) => {
-      el.classList.toggle("closed", closedState);
-      const dot = el.querySelector(".dot");
-      el.innerHTML = "";
-      if (dot) el.appendChild(dot);
-      else {
-        const d = document.createElement("span");
-        d.className = "dot";
-        el.appendChild(d);
-      }
-      el.insertAdjacentHTML("beforeend", html);
-    });
-  }
-
   /* ---------- Scroll reveal (IntersectionObserver + CSS, ingen GSAP) ---------- */
   function initReveal() {
     const items = document.querySelectorAll(".reveal");
@@ -130,7 +74,14 @@
       const cat = MENU_CATEGORIES.find((c) => c.key === key) || MENU_CATEGORIES[0];
       list.innerHTML = cat.items
         .map(
-          (it) => `<article class="menu-item">${it.num ? `<span class="num">${it.num}</span>` : ""}<div><h4>${it.name}</h4><p>${it.desc}</p></div></article>`
+          (it) => `<article class="menu-item">
+            <div class="menu-item-media"><img src="${it.img}" alt="${it.name}" loading="lazy" width="800" height="600"></div>
+            <div class="menu-item-body">
+              <div class="menu-item-row"><h4>${it.num ? `${it.num} ` : ""}${it.name}</h4><span class="price">${it.price}</span></div>
+              <p>${it.desc}</p>
+              ${it.tags && it.tags.length ? `<div class="menu-item-tags">${it.tags.map((t) => `<span>${t}</span>`).join("")}</div>` : ""}
+            </div>
+          </article>`
         )
         .join("");
     }
@@ -156,7 +107,6 @@
   document.addEventListener("DOMContentLoaded", function () {
     initHeaderScroll();
     initMobileMenu();
-    initStatus();
     initReveal();
     initMenuTabs();
     initYear();
